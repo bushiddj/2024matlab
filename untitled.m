@@ -49,8 +49,7 @@ a4 = materials(3).thermal_conductivity / (materials(3).density * materials(3).sp
 
 p1 = molten_salt.velocity / (molten_salt.density * molten_salt.specific_heat);
 
-total_time = 60 * 9;
-dt = 0.5;    % 时间步长和总时间
+dt = 2.5;    % 时间步长和总时间
 hour = 8;
 minute = 40;
 k0 = molten_salt.thermal_conductivity;
@@ -58,7 +57,7 @@ k1 = materials(1).thermal_conductivity;
 k2 = materials(2).thermal_conductivity;
 k3 = materials(3).thermal_conductivity;
 
-p2 = 6;
+p2 = 15;
 p3 = temperature_at_time(60*hour+minute);
 
 % 初始化温度场
@@ -89,7 +88,7 @@ move_step  = round(molten_salt.velocity * dt / dz);
 
 % 初始化存储数据的矩阵
 selected_row = 54;  % 选择第54行
-total_hours = 24*30;  % 记录小时的数据
+total_hours = 24*10;  % 记录小时的数据
 T_history = zeros(total_hours, Nr);  % 存储每小时的温度分布
 time_hours = zeros(1, total_hours);  % 存储时间点
 hour_count = 1;
@@ -126,25 +125,29 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
     % 在 r = r_interface1 处（界面1）：两侧分别使用 k0 (左侧) 和 k1 (右侧)
     if i_interface1 > 1 && i_interface1 < Nr
         A_r(i_interface1, :) = 0;
-        A_r(i_interface1, i_interface1-1) = -k0 / dr;      % 用前向差分（左侧热流）
-        A_r(i_interface1, i_interface1)   = (k0 + k1) / dr;
-        A_r(i_interface1, i_interface1+1) = -k1 / dr;        % 用后向差分（右侧热流）
+        % 计算界面处的有效热导率 Keff
+        Keff = 2 * k0 * k1 / (k0 + k1);  % 通过谐均值计算
+        A_r(i_interface1, i_interface1-1) = -Keff / dr;
+        A_r(i_interface1, i_interface1)   = 2 * Keff / dr;
+        A_r(i_interface1, i_interface1+1) = -Keff / dr;
         b_r(i_interface1) = 0;
     end
     % 在 r = r_interface2 处（界面2）：两侧分别使用 k1 (左侧) 和 k2 (右侧)
     if i_interface2 > 1 && i_interface2 < Nr
         A_r(i_interface2, :) = 0;
-        A_r(i_interface2, i_interface2-1) = -k1 / dr;
-        A_r(i_interface2, i_interface2)   = (k1 + k2) / dr;
-        A_r(i_interface2, i_interface2+1) = -k2 / dr;
+       Keff = 2 * k1 * k2 / (k1 + k2);
+       A_r(i_interface2, i_interface2-1) = -Keff / dr;
+       A_r(i_interface2, i_interface2)   = 2 * Keff / dr;
+       A_r(i_interface2, i_interface2+1) = -Keff / dr;
         b_r(i_interface2) = 0;
     end
     % 在 r = r_interface3 处（界面3）：两侧分别使用 k2 (左侧) 和 k3 (右侧)
     if i_interface3 > 1 && i_interface3 < Nr
         A_r(i_interface3, :) = 0;
-        A_r(i_interface3, i_interface3-1) = -k2 / dr;
-        A_r(i_interface3, i_interface3)   = (k2 + k3) / dr;
-        A_r(i_interface3, i_interface3+1) = -k3 / dr;
+        Keff = 2 * k2 * k3 / (k2 + k3);
+        A_r(i_interface3, i_interface3-1) = -Keff / dr;
+        A_r(i_interface3, i_interface3)   = 2 * Keff / dr;
+A_r(i_interface3, i_interface3+1) = -Keff / dr;
         b_r(i_interface3) = 0;
     end
     % -----------------------------
