@@ -123,31 +123,33 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
         end
            % --- 修改内部界面处的离散方程 ---
     % 在 r = r_interface1 处（界面1）：两侧分别使用 k0 (左侧) 和 k1 (右侧)
- % 在 r = r_interface1 处（界面1）：两侧分别使用 k0 (左侧) 和 k1 (右侧)
     if i_interface1 > 1 && i_interface1 < Nr
         A_r(i_interface1, :) = 0;
-        A_r(i_interface1, i_interface1-1) = -k0 / dr;      % 用前向差分（左侧热流）
-        A_r(i_interface1, i_interface1)   = (k0 + k1) / dr;
-        A_r(i_interface1, i_interface1+1) = -k1 / dr;        % 用后向差分（右侧热流）
+        % 计算界面处的有效热导率 Keff
+        Keff = 2 * k0 * k1 / (k0 + k1);  % 通过谐均值计算
+        A_r(i_interface1, i_interface1-1) = -Keff / dr;
+        A_r(i_interface1, i_interface1)   = 2 * Keff / dr;
+        A_r(i_interface1, i_interface1+1) = -Keff / dr;
         b_r(i_interface1) = 0;
     end
     % 在 r = r_interface2 处（界面2）：两侧分别使用 k1 (左侧) 和 k2 (右侧)
     if i_interface2 > 1 && i_interface2 < Nr
         A_r(i_interface2, :) = 0;
-        A_r(i_interface2, i_interface2-1) = -k1 / dr;
-        A_r(i_interface2, i_interface2)   = (k1 + k2) / dr;
-        A_r(i_interface2, i_interface2+1) = -k2 / dr;
+       Keff = 2 * k1 * k2 / (k1 + k2);
+       A_r(i_interface2, i_interface2-1) = -Keff / dr;
+       A_r(i_interface2, i_interface2)   = 2 * Keff / dr;
+       A_r(i_interface2, i_interface2+1) = -Keff / dr;
         b_r(i_interface2) = 0;
     end
     % 在 r = r_interface3 处（界面3）：两侧分别使用 k2 (左侧) 和 k3 (右侧)
     if i_interface3 > 1 && i_interface3 < Nr
         A_r(i_interface3, :) = 0;
-        A_r(i_interface3, i_interface3-1) = -k2 / dr;
-        A_r(i_interface3, i_interface3)   = (k2 + k3) / dr;
-        A_r(i_interface3, i_interface3+1) = -k3 / dr;
+        Keff = 2 * k2 * k3 / (k2 + k3);
+        A_r(i_interface3, i_interface3-1) = -Keff / dr;
+        A_r(i_interface3, i_interface3)   = 2 * Keff / dr;
+A_r(i_interface3, i_interface3+1) = -Keff / dr;
         b_r(i_interface3) = 0;
     end
-    % -----------------------------
     % -----------------------------
     
     % r=0处的边界条件（轴对称性）
@@ -177,9 +179,9 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
                 alpha = a4; conv_term = 0;
             end
             
-           A_z(j, j-1) = -alpha / dz^2 - max(conv_term, 0) / dz;
-           A_z(j, j) = 1 / dt + 2 * alpha / dz^2 + abs(conv_term) / dz;
-           A_z(j, j+1) = -alpha / dz^2 - min(conv_term, 0) / dz;
+            A_z(j, j-1) = -alpha / dz^2 - conv_term / (2 * dz);
+            A_z(j, j) = 1 / dt + 2 * alpha / dz^2;
+            A_z(j, j+1) = -alpha / dz^2 + conv_term / (2 * dz);
             b_z(j) = T(i, j) / dt;
         end
         
@@ -196,10 +198,9 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
     end
     
     % 更新温度场，模拟x方向移动
-    %for j = Nz:-1:2
-    %T(:, j) = T(:, j) - (dt / dz) * molten_salt.velocity .* (T(:, j) - T(:, j-1));
-    %end
-
+    if mod(t, dt * 0.5) == 0
+        T = circshift(T, [0, move_step]);
+    end
     T(:,1)=T(:,2);
     % 绘制中间结果，每隔一段时间绘制一次
     if mod(t0, 100) < dt % 每隔10个时间单位绘制一次
