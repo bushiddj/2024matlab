@@ -37,7 +37,7 @@ molten_salt.velocity = 0.5;                % 速度(m/s)
 % 参数设置
 z_max = 600;  % z 的最大值
 r_max = 0.15 + materials(1).thickness + materials(2).thickness + materials(3).thickness; % r 的最大值
-Nz = 100;     % z 方向的离散点数
+Nz = 281;     % z 方向的离散点数
 Nr = 281;     % r 方向的离散点数
 dz = z_max / (Nz - 1);
 dr = r_max / (Nr - 1);
@@ -48,8 +48,8 @@ a3 = materials(2).thermal_conductivity / (materials(2).density * materials(2).sp
 a4 = materials(3).thermal_conductivity / (materials(3).density * materials(3).specific_heat);
 
 p1 = molten_salt.velocity / (molten_salt.density * molten_salt.specific_heat);
-
-dt = 2.5;    % 时间步长和总时间
+max_dt = 0.5 * min([dr^2 / a1, dr^2 / a2, dr^2 / a3, dr^2 / a4]);
+dt = 1.0;    % 时间步长和总时间
 hour = 8;
 minute = 40;
 k0 = molten_salt.thermal_conductivity;
@@ -57,7 +57,7 @@ k1 = materials(1).thermal_conductivity;
 k2 = materials(2).thermal_conductivity;
 k3 = materials(3).thermal_conductivity;
 
-p2 = 5;
+p2 = 10.5;
 p3 = temperature_at_time(60*hour+minute);
 
 % 初始化温度场
@@ -87,8 +87,7 @@ i_interface3 = round(r_interface3/dr) + 1;
 move_step  = round(molten_salt.velocity * dt / dz);
 
 % 初始化存储数据的矩阵
-selected_row = 54;  % 选择第54行
-total_hours = 24*10;  % 记录小时的数据
+total_hours = 24*3;  % 记录小时的数据
 T_history = zeros(total_hours, Nr);  % 存储每小时的温度分布
 time_hours = zeros(1, total_hours);  % 存储时间点
 hour_count = 1;
@@ -186,7 +185,10 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
         end
         
         A_z(1, 1) = 1; b_z(1) = 600;
-        A_z(Nz, Nz-1) = -1; A_z(Nz, Nz) = 1; b_z(Nz) = 0;
+        A_z(Nz, Nz-1) = -p2;
+        A_z(Nz, Nz) = p2 + 1/dt;
+        b_z(Nz) = p2 * p3;
+  
         
         T(i, :) = (A_z \ b_z)';
     end
@@ -201,7 +203,6 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
     %for j = Nz:-1:2
     %T(:, j) = T(:, j) - (dt / dz) * molten_salt.velocity .* (T(:, j) - T(:, j-1));
     %end
-
     T(:,1)=T(:,2);
     % 绘制中间结果，每隔一段时间绘制一次
     if mod(t0, 100) < dt % 每隔10个时间单位绘制一次
@@ -230,7 +231,7 @@ surf(R_grid, Time_grid, T_history, 'EdgeColor', 'none');
 xlabel('半径 r (m)');
 ylabel('时间 t (小时)');
 zlabel('温度分布 (K)');
-title(['72小时内温度分布随时间和温度的变化 (z = ', num2str(Nz*dz), ' m)']);
+title(['240小时内温度分布随时间和温度的变化 (z = ', num2str(Nz*dz), ' m)']);
 colorbar;
 view(45, 30);  % 设置视角
 
@@ -255,3 +256,16 @@ patch([r_interface3 r_interface3 r_interface3 r_interface3], ...
 
 % 添加图例说明
 legend('温度分布', '材料界面');
+
+
+% 取 T_history 的第 i_interface1 列
+temperature_data = T_history(:, i_interface1);
+
+% 绘制二维图像
+figure;
+plot(Time_grid, temperature_data, '-o', 'LineWidth', 1.5, 'MarkerSize', 6, 'MarkerFaceColor', 'b');
+xlabel('时间 (小时)', 'FontSize', 12, 'FontWeight', 'bold');
+ylabel('温度 (K)', 'FontSize', 12, 'FontWeight', 'bold');
+title('温度随时间变化图', 'FontSize', 14, 'FontWeight', 'bold');
+grid on;
+set(gca, 'FontSize', 12, 'FontWeight', 'bold');

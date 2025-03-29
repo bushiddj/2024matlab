@@ -45,7 +45,7 @@ molten_salt.velocity = 0.5;                % 速度(m/s)
 % 参数设置
 z_max = 600;  % z 的最大值
 r_max = 0.15 + materials(1).thickness + materials(2).thickness + materials(3).thickness+0.02; % r 的最大值
-Nz = 100;     % z 方向的离散点数
+Nz = 281;     % z 方向的离散点数
 Nr = 281;     % r 方向的离散点数
 dz = z_max / (Nz - 1);
 dr = r_max / (Nr - 1);
@@ -57,8 +57,8 @@ a4 = materials(3).thermal_conductivity / (materials(3).density * materials(3).sp
 a5 = materials(4).thermal_conductivity / (materials(4).density * materials(4).specific_heat);
 
 p1 = molten_salt.velocity / (molten_salt.density * molten_salt.specific_heat);
-
-dt = 2.5;    % 时间步长和总时间
+max_dt = 0.5 * min([dr^2 / a1, dr^2 / a2, dr^2 / a3, dr^2 / a4]);
+dt = 1.0;    % 时间步长和总时间
 hour = 8;
 minute = 40;
 k0 = molten_salt.thermal_conductivity;
@@ -67,7 +67,7 @@ k2 = materials(2).thermal_conductivity;
 k3 = materials(3).thermal_conductivity;
 k4 = materials(4).thermal_conductivity;
 
-p2 = 5;
+p2 = 10.5;
 p3 = temperature_at_time(60*hour+minute);
 r_salt_max=0.02;
 v_threshold=8;
@@ -94,19 +94,19 @@ r_interface1 = 0.15; % 第一区域与第二区域的界面
 r_interface2 = r_interface1+materials(1).thickness;  % 第二区域与第三区域界面
 r_interface3 = r_interface2+materials(2).thickness;  % 第三区域与第四区域界面
 r_interface4 = r_interface3+materials(3).thickness;  % 第四区域与第五区域界面
-r_interface5 = r_interface4 +materials(4).thickness;
+r_interface5 = r_interface4+materials(4).thickness;
 %
 % 计算对应的网格索引（假设 r 从0开始，网格步长 dr）
 i_interface1 = round(r_interface1/dr) + 1;
 i_interface2 = round(r_interface2/dr) + 1;
 i_interface3 = round(r_interface3/dr) + 1;
 i_interface4 = round(r_interface4/dr) + 1;
-i_interface5 = round(r_interface5 / dr) + 1;
+i_interface5 = round(r_interface5/dr) + 1;
 % 计算移动步长
 move_step  = round(molten_salt.velocity * dt / dz);
 
 % 初始化存储数据的矩阵
-total_hours = 24*10;  % 记录小时的数据
+total_hours = 24*3;  % 记录小时的数据
 T_history = zeros(total_hours, Nr);  % 存储每小时的温度分布
 time_hours = zeros(1, total_hours);  % 存储时间点
 hour_count = 1;
@@ -211,17 +211,17 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
     b_r(1) = 0;
     % r=r_max 处的边界条件（例如，对流或指定温度）
         if(isnight==1)
-            A_r(Nr, Nr-1) = k4 / dr;
-            A_r(Nr, Nr) = (-k4 / dr + p2);
+            A_r(Nr, Nr-1) = -k4 / dr;
+            A_r(Nr, Nr) = (k4 / dr + p2);
             b_r(Nr) = p2 * p3;
             T(:, j) = A_r \ b_r;
         else
-            A_r(Nr, Nr-1) = k3 / dr;
-            A_r(Nr, Nr) = -k3 / dr + p2;
+            A_r(Nr, Nr-1) = -k3 / dr;
+            A_r(Nr, Nr) = k3 / dr + p2;
             b_r(Nr) = p2 * p3+(m3_ref-m3_absorb)*G_t(t);
             T(:, j) = A_r \ b_r;
         end
-    
+    end
     % ADI 方法的第二步：隐式处理 z 方向扩散
     for i = 2:Nr-1
         A_z = zeros(Nz, Nz);
@@ -234,8 +234,10 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
                 alpha = a2; conv_term = 0;
             elseif r_pos <= r_threshold + materials(1).thickness + materials(2).thickness
                 alpha = a3; conv_term = 0;
-            else
+            elseif r_pos <= r_threshold + materials(1).thickness + materials(2).thickness+ materials(3).thickness
                 alpha = a4; conv_term = 0;
+            else
+                alpha = a5; conv_term = 0;
             end
             
            A_z(j, j-1) = -alpha / dz^2 - max(conv_term, 0) / dz;
@@ -245,7 +247,9 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
         end
         
         A_z(1, 1) = 1; b_z(1) = 600;
-        A_z(Nz, Nz-1) = -1; A_z(Nz, Nz) = 1; b_z(Nz) = 0;
+        A_z(Nz, Nz-1) = -p2;
+        A_z(Nz, Nz) = p2 + 1/dt;
+        b_z(Nz) = p2 * p3;
         
         T(i, :) = (A_z \ b_z)';
     end
@@ -314,3 +318,16 @@ patch([r_interface3 r_interface3 r_interface3 r_interface3], ...
 
 % 添加图例说明
 legend('温度分布', '材料界面');
+
+
+% 取 T_history 的第 i_interface1 列
+temperature_data = T_history(:, i_interface1);
+
+% 绘制二维图像
+figure;
+plot(Time_grid, temperature_data, '-o', 'LineWidth', 1.5, 'MarkerSize', 6, 'MarkerFaceColor', 'b');
+xlabel('时间 (小时)', 'FontSize', 12, 'FontWeight', 'bold');
+ylabel('温度 (K)', 'FontSize', 12, 'FontWeight', 'bold');
+title('温度随时间变化图', 'FontSize', 14, 'FontWeight', 'bold');
+grid on;
+set(gca, 'FontSize', 12, 'FontWeight', 'bold');
