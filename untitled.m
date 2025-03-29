@@ -38,7 +38,7 @@ molten_salt.velocity = 0.5;                % 速度(m/s)
 z_max = 600;  % z 的最大值
 r_max = 0.15 + materials(1).thickness + materials(2).thickness + materials(3).thickness; % r 的最大值
 Nz = 100;     % z 方向的离散点数
-Nr = 100;     % r 方向的离散点数
+Nr = 281;     % r 方向的离散点数
 dz = z_max / (Nz - 1);
 dr = r_max / (Nr - 1);
 
@@ -57,7 +57,7 @@ k1 = materials(1).thermal_conductivity;
 k2 = materials(2).thermal_conductivity;
 k3 = materials(3).thermal_conductivity;
 
-p2 = 15;
+p2 = 5;
 p3 = temperature_at_time(60*hour+minute);
 
 % 初始化温度场
@@ -126,25 +126,27 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
  % 在 r = r_interface1 处（界面1）：两侧分别使用 k0 (左侧) 和 k1 (右侧)
     if i_interface1 > 1 && i_interface1 < Nr
         A_r(i_interface1, :) = 0;
-        A_r(i_interface1, i_interface1-1) = -k0 / dr;      % 用前向差分（左侧热流）
-        A_r(i_interface1, i_interface1)   = (k0 + k1) / dr;
-        A_r(i_interface1, i_interface1+1) = -k1 / dr;        % 用后向差分（右侧热流）
+        A_r(i_interface1, i_interface1-1) = -k0 / (dr/2);
+        A_r(i_interface1, i_interface1)   = (k0 / (dr/2) + k1 / (dr/2));
+        A_r(i_interface1, i_interface1+1) = -k1 / (dr/2);
+        b_r(i_interface1) = 0;
+
         b_r(i_interface1) = 0;
     end
     % 在 r = r_interface2 处（界面2）：两侧分别使用 k1 (左侧) 和 k2 (右侧)
     if i_interface2 > 1 && i_interface2 < Nr
         A_r(i_interface2, :) = 0;
-        A_r(i_interface2, i_interface2-1) = -k1 / dr;
-        A_r(i_interface2, i_interface2)   = (k1 + k2) / dr;
-        A_r(i_interface2, i_interface2+1) = -k2 / dr;
+        A_r(i_interface2, i_interface2-1) = -k1 / (dr/2);
+        A_r(i_interface2, i_interface2)   = (k1 / (dr/2) + k2 / (dr/2));
+        A_r(i_interface2, i_interface2+1) = -k2 / (dr/2);
         b_r(i_interface2) = 0;
     end
     % 在 r = r_interface3 处（界面3）：两侧分别使用 k2 (左侧) 和 k3 (右侧)
     if i_interface3 > 1 && i_interface3 < Nr
         A_r(i_interface3, :) = 0;
-        A_r(i_interface3, i_interface3-1) = -k2 / dr;
-        A_r(i_interface3, i_interface3)   = (k2 + k3) / dr;
-        A_r(i_interface3, i_interface3+1) = -k3 / dr;
+        A_r(i_interface3, i_interface3-1) = -k2 / (dr/2);
+        A_r(i_interface3, i_interface3)   = (k2 / (dr/2) + k3 / (dr/2));
+        A_r(i_interface3, i_interface3+1) = -k3 / (dr/2);
         b_r(i_interface3) = 0;
     end
     % -----------------------------
