@@ -37,8 +37,8 @@ molten_salt.velocity = 0.5;                % 速度(m/s)
 % 参数设置
 z_max = 600;  % z 的最大值
 r_max = 0.15 + materials(1).thickness + materials(2).thickness + materials(3).thickness; % r 的最大值
-Nz = 281;     % z 方向的离散点数
-Nr = 281;     % r 方向的离散点数
+Nz = 281*2;     % z 方向的离散点数
+Nr = 281*2;     % r 方向的离散点数
 dz = z_max / (Nz - 1);
 dr = r_max / (Nr - 1);
 

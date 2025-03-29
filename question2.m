@@ -129,6 +129,19 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
     materials(4).thickness=r_salt_max*(1-exp(-wind_speed/v_threshold));
     r_interface5 = r_interface4 +materials(4).thickness;
     i_interface5 = round(r_interface5 / dr) + 1;
+    % 动态调整 Nz 并插值温度数据
+    Nz_new = round(z_max / dz) + 1;
+    if Nz_new ~= Nz
+        T_interp = zeros(Nr, Nz_new);
+        z_old = linspace(0, z_max, Nz);
+        z_new = linspace(0, z_max, Nz_new);
+        for i = 1:Nr
+            T_interp(i, :) = interp1(z_old, T(i, :), z_new, 'linear');
+        end
+        T = T_interp;
+        Nz = Nz_new;
+    end
+
     for i = 1:Nr
         r_pos = (i-1) * dr;
         if r_pos > r_interface5
