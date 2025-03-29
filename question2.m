@@ -106,7 +106,7 @@ i_interface5 = round(r_interface5/dr) + 1;
 move_step  = round(molten_salt.velocity * dt / dz);
 
 % 初始化存储数据的矩阵
-total_hours = 24*3;  % 记录小时的数据
+total_hours = 24*7;  % 记录小时的数据
 T_history = zeros(total_hours, Nr);  % 存储每小时的温度分布
 time_hours = zeros(1, total_hours);  % 存储时间点
 hour_count = 1;
@@ -306,7 +306,7 @@ surf(R_grid, Time_grid, T_history, 'EdgeColor', 'none');
 xlabel('半径 r (m)');
 ylabel('时间 t (小时)');
 zlabel('温度分布 (K)');
-title(['72小时内温度分布随时间和温度的变化 (z = ', num2str(Nz*dz), ' m)']);
+title(['168小时内温度分布随时间和温度的变化']);
 colorbar;
 view(45, 30);  % 设置视角
 
