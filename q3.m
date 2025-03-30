@@ -1,4 +1,4 @@
-%问题2
+%问题3
 clear;
 clc;
 % 定义材料的结构体
@@ -39,4 +39,14 @@ molten_salt.specific_heat = 1500;          % 比热容C (J/kg·K)
 molten_salt.thermal_conductivity = 0.55;   % 热导率K (W/m·K)
 molten_salt.diameter = 0.3;                % 直径(m)
 molten_salt.velocity = 0.5;                % 速度(m/s)
-[Tmax2, Tmin2] = getTemperatureFunc(materials)
+
+lb = [0.02, 0.04, 0.005]; % 各层厚度最小值
+ub = [0.05, 0.1, 0.02];   % 各层厚度最大值
+x0 = [materials(1).thickness, materials(2).thickness, materials(3).thickness];  % 初始值
+
+options = optimoptions('particleswarm', 'SwarmSize', 30, 'MaxIterations', 100);
+[x_opt, fval] = particleswarm(@(x) fitnessFunc(x, materials), 3, lb, ub, options);
+
+disp('优化后的材料厚度:');
+disp(x_opt);
+disp(['最优成本: ', num2str(fval)]);
