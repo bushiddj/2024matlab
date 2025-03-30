@@ -45,8 +45,8 @@ molten_salt.velocity = 0.5;                % 速度(m/s)
 % 参数设置
 z_max = 600;  % z 的最大值
 r_max = 0.15 + materials(1).thickness + materials(2).thickness + materials(3).thickness+0.02; % r 的最大值
-Nz = 281;     % z 方向的离散点数
-Nr = 281;     % r 方向的离散点数
+Nz = 100;     % z 方向的离散点数
+Nr = 100;     % r 方向的离散点数
 dz = z_max / (Nz - 1);
 dr = r_max / (Nr - 1);
 
@@ -150,7 +150,7 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
         end
     end
 
-    if (t < 6*60) || (t > 16)
+    if (t < 6*60) || (t > 16*60)
     materials(2).thermal_conductivity = 0.042+0.008;
     isnight=1;
     else

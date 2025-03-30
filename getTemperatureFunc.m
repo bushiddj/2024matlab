@@ -258,7 +258,7 @@ for t0 = 60*hour+minute:dt:60*hour+minute+60*total_hours
         end
     end
 end
-T1=T_history(1 :5,2)
+T1=T_history(1 :5,i_interface1)
 Tmax=max(T1)
 Tmin=min(T1)
 end
